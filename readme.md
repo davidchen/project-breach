@@ -9,7 +9,7 @@ To create a tool that can optimally solve any "Breach Protocol" mini-game found 
 * Timer only begins upon selecting first element to add to buffer.
 
 # How to Read Test Case File
-The test case file is in _tests.txt_. Instructions are next to each line:
+Each test case file is named _test_x.txt_. Instructions are next to each line:
 
 ```text
 6  # this denotes the size of the board, n; in this case a 6x6 board
