@@ -1,5 +1,5 @@
 import itertools
-
+import copy
 
 class BreachNode:
 
@@ -51,6 +51,80 @@ class BreachBoard:
         return graph
 
     def create_possible_solutions(self):
+        print(f'buffer size = {self.buffer_size}')
+        print(self.sequences)
+
+        all_paths_possible = []  # we will return this
+
+        num_of_sequences = len(self.sequences)
+        indices_to_choose = list(range(num_of_sequences))
+
+        all_solution_orders_idxs_possible = [[i] for i in indices_to_choose]
+
+        for num_to_choose in range(2, num_of_sequences+1):
+            combos = list(itertools.combinations(indices_to_choose, num_to_choose))
+            for c in combos:
+                seq_indices = list(c)
+                perms_of_this_seq_indices = list(itertools.permutations(seq_indices))
+                all_solution_orders_idxs_possible.extend(list(i) for i in perms_of_this_seq_indices)
+                # print(perms_of_this_seq_indices)
+
+        print('all_solution_orders_possible')
+        print(all_solution_orders_idxs_possible)
+
+        possible_unmerged_paths = []
+        for solution_order_idx in all_solution_orders_idxs_possible:
+            solution_path = [self.sequences[idx] for idx in solution_order_idx]
+            possible_unmerged_paths.append(solution_path)
+
+        # now check each unmerged path for ability to merge
+        possible_merged_paths = []
+        for unmerged in possible_unmerged_paths:
+            if len(unmerged) < 2:
+                continue
+            else:
+                merge_indices_found = []
+                for seq_step_idx in range(len(unmerged)-1):
+                    left_step = unmerged[seq_step_idx]
+                    right_step = unmerged[seq_step_idx+1]
+                    if left_step[-1] == right_step[0]:
+                        merge_indices_found.append([seq_step_idx, seq_step_idx+1])
+
+                if len(merge_indices_found) < 1:
+                    continue
+                else:
+                    print()
+                    print(f'unmerged candidate found = {unmerged}')
+                    print(f'MERGE INDICES NEEDED = {merge_indices_found}')
+                    new_merged = copy.deepcopy(unmerged)  # make a deep copy since unmerged is actually a 2d lsit
+                    indices_to_remove = []
+                    for merge_indices in merge_indices_found:
+                        l, r = merge_indices[0], merge_indices[1]
+                        new_merged[l].extend(new_merged[r][1:])
+                        indices_to_remove.append(r)
+                    print(f'indices to remove = {indices_to_remove}')
+                    indices_to_remove.sort(reverse=True)
+                    for idx in indices_to_remove:
+                        new_merged.pop(idx)
+                    print(f'MERGED! = {new_merged}')
+
+
+        # print(*possible_unmerged_paths, sep='\n')
+        exit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         first_row_values = [n.value for n in self.graph[0]]
         num_sequences = len(self.sequences)
@@ -97,8 +171,6 @@ class BreachBoard:
         final_seqs.sort(key=len)
         for s in final_seqs:
             print(s)
-
-
 
     def print_graph(self):
 
