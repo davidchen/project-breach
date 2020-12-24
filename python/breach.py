@@ -83,23 +83,27 @@ class BreachBoard:
             if len(unmerged) < 2:
                 continue
             else:
-                merge_indices_found = []
+                merge_index_pairs = []
                 for seq_step_idx in range(len(unmerged)-1):
                     left_step = unmerged[seq_step_idx]
                     right_step = unmerged[seq_step_idx+1]
                     if left_step[-1] == right_step[0]:
-                        merge_indices_found.append([seq_step_idx, seq_step_idx+1])
+                        merge_index_pairs.append([seq_step_idx, seq_step_idx+1])
 
-                if len(merge_indices_found) < 1:
+                if len(merge_index_pairs) < 1:
                     continue
                 else:
                     print()
                     print(f'unmerged candidate found = {unmerged}')
-                    print(f'MERGE INDICES NEEDED = {merge_indices_found}')
+                    print(f'MERGE INDICES NEEDED = {merge_index_pairs}')
                     new_merged = copy.deepcopy(unmerged)  # make a deep copy since unmerged is actually a 2d lsit
                     indices_to_remove = []
-                    for merge_indices in merge_indices_found:
-                        l, r = merge_indices[0], merge_indices[1]
+
+                    # todo: there may be MULTIPLE merge index pairs in merge_index_pairs!! we need to make sure we find all possible
+                    # merge combinations! aka if all 3 of 3 sequences can be merged, we can do 1+2,3 or 1,2+3 or 1,2,3 or 1+2+3!!
+
+                    for merge_index_pair in merge_index_pairs:
+                        l, r = merge_index_pair[0], merge_index_pair[1]
                         new_merged[l].extend(new_merged[r][1:])
                         indices_to_remove.append(r)
                     print(f'indices to remove = {indices_to_remove}')
