@@ -80,38 +80,62 @@ class BreachBoard:
         # now check each unmerged path for ability to merge
         possible_merged_paths = []
         for unmerged in possible_unmerged_paths:
-            if len(unmerged) < 2:
+            if len(unmerged) == 1:  # this path only contains one sequence, so def can't have a merge (requires > 1 seq)
                 continue
             else:
                 merge_index_pairs = []
+
                 for seq_step_idx in range(len(unmerged)-1):
                     left_step = unmerged[seq_step_idx]
                     right_step = unmerged[seq_step_idx+1]
                     if left_step[-1] == right_step[0]:
                         merge_index_pairs.append([seq_step_idx, seq_step_idx+1])
 
-                if len(merge_index_pairs) < 1:
+                if len(merge_index_pairs) == 0:  # no merge pairs found so this one cannot be merged
                     continue
                 else:
-                    print()
-                    print(f'unmerged candidate found = {unmerged}')
-                    print(f'MERGE INDICES NEEDED = {merge_index_pairs}')
-                    new_merged = copy.deepcopy(unmerged)  # make a deep copy since unmerged is actually a 2d lsit
-                    indices_to_remove = []
+                    # print(f'\n\nUNMERGED CANDIDATE FOUND = {unmerged}')
+                    # print(f'MERGE INDICES NEEDED = {merge_index_pairs}')
 
-                    # todo: there may be MULTIPLE merge index pairs in merge_index_pairs!! we need to make sure we find all possible
-                    # merge combinations! aka if all 3 of 3 sequences can be merged, we can do 1+2,3 or 1,2+3 or 1,2,3 or 1+2+3!!
+                    num_merge_pairs = len(merge_index_pairs)
+                    binary_digits = num_merge_pairs
+                    enum_target = 2 ** num_merge_pairs - 1
+                    pair_toggle_combo_strings = ['{0:b}'.format(x).zfill(binary_digits) for x in range(enum_target+1)]
+                    pair_toggle_combos = [[int(c) for c in y] for y in pair_toggle_combo_strings]
+                    # print(f'pair_toggle_combos = {pair_toggle_combos}')
 
-                    for merge_index_pair in merge_index_pairs:
-                        l, r = merge_index_pair[0], merge_index_pair[1]
-                        new_merged[l].extend(new_merged[r][1:])
-                        indices_to_remove.append(r)
-                    print(f'indices to remove = {indices_to_remove}')
-                    indices_to_remove.sort(reverse=True)
-                    for idx in indices_to_remove:
-                        new_merged.pop(idx)
-                    print(f'MERGED! = {new_merged}')
+                    for toggle_pair_booleans in pair_toggle_combos:
+                        new_merged = copy.deepcopy(unmerged)  # make a deep copy since unmerged is actually a 2d list
+                        indices_to_remove = []
 
+                        # each toggle boolean gives us a new solution - need to enumerate in reverse
+                        for pair_idx, toggle_boolean in reversed(list(enumerate(toggle_pair_booleans))):
+                            if toggle_boolean == 1:
+                                associated_merge_pair = merge_index_pairs[pair_idx]
+                                l, r = associated_merge_pair[0], associated_merge_pair[1]
+                                new_merged[l].extend(new_merged[r][1:])
+                                indices_to_remove.append(r)
+                            else:
+                                continue
+
+                        indices_to_remove.sort(reverse=True)  # need to order descending to remove from right to left
+                        for idx in indices_to_remove:
+                            new_merged.pop(idx)
+
+                        # print(f'NEW MERGED: {new_merged}')
+                        possible_merged_paths.append(new_merged)
+
+        # at this point we have both possible_unmerged_paths and possible_merged_paths; all non-wild card solutions
+        all_non_wildcard_solutions = []
+        for sol in possible_unmerged_paths:
+            if sol not in all_non_wildcard_solutions:
+                all_non_wildcard_solutions.append(sol)
+        for sol in possible_merged_paths:
+            if sol not in all_non_wildcard_solutions:
+                all_non_wildcard_solutions.append(sol)
+
+        print(*all_non_wildcard_solutions, sep='\n')
+        print(len(all_non_wildcard_solutions))
 
         # print(*possible_unmerged_paths, sep='\n')
         exit()
