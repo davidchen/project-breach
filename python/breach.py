@@ -127,17 +127,49 @@ class BreachBoard:
 
         # at this point we have both possible_unmerged_paths and possible_merged_paths; all non-wild card solutions
         all_non_wildcard_solutions = []
+        # only add to all_non_wildcard_solutions if total len is less than buffer
+
+        print(f'possible_unmerged_paths= {possible_unmerged_paths}')
+        print(f'possible_merged_paths= {possible_merged_paths}')
+
         for sol in possible_unmerged_paths:
+            total_len = sum([len(seq) for seq in sol])
+            if total_len > self.buffer_size:  # if total length of nested list > buffer, ignore
+                continue
             if sol not in all_non_wildcard_solutions:
                 all_non_wildcard_solutions.append(sol)
+
         for sol in possible_merged_paths:
+            total_len = sum([len(seq) for seq in sol])
+            if total_len > self.buffer_size:  # if total length of nested list > buffer, ignore
+                continue
             if sol not in all_non_wildcard_solutions:
                 all_non_wildcard_solutions.append(sol)
 
-        print(*all_non_wildcard_solutions, sep='\n')
-        print(len(all_non_wildcard_solutions))
+        # print(*all_non_wildcard_solutions, sep='\n')
+        # print(len(all_non_wildcard_solutions))
 
-        # print(*possible_unmerged_paths, sep='\n')
+        for non_wildcard_solution in all_non_wildcard_solutions:
+            total_len = sum([len(seq) for seq in non_wildcard_solution])
+            wildcards_available = self.buffer_size - total_len
+            if wildcards_available > 0:
+                copy_of_non_wc_sol = copy.deepcopy(non_wildcard_solution)
+                for wild in range(wildcards_available):  # add all the wildcards
+                    copy_of_non_wc_sol.extend([['*']])
+
+                print()
+                print(non_wildcard_solution, total_len, wildcards_available)
+                print(copy_of_non_wc_sol)
+
+                all_perms_of_this_copy = list(itertools.permutations(copy_of_non_wc_sol))
+                print('perms:')
+                print(*all_perms_of_this_copy,sep='\n')
+
+                # todo: all the wildcards are counting as separate instances so permutations making multiple same
+                # solutons - need to work out
+                # then get all permutations
+
+
         exit()
 
 
