@@ -1,14 +1,16 @@
 import itertools
 import copy
 
+
 class BreachNode:
 
-    def __init__(self, value, r_idx, c_idx):
+    def __init__(self, value, r_idx, c_idx, id):
         self.value = value
         self.row_index = r_idx
         self.col_index = c_idx
         self.v_connections = []
         self.h_connections = []
+        self.id = id
 
 
 class BreachBoard:
@@ -21,18 +23,24 @@ class BreachBoard:
         self.buffer_size = board_buffer_size
 
         self.graph = self.create_graph()  # create the graph after receiving all inputs
-        self.possible_solutions = self.create_possible_solutions()  # create the list of possible solutions given seqs
+
+        self.print_graph()
+        self.get_all_paths_from_start()
+
+        # self.possible_solutions = self.create_possible_solutions()  # create the list of possible solutions given seqs
 
     def create_graph(self):
 
         graph = []
 
+        node_id = 0
         # first create all the nodes in the 2d array
         for row_idx, row in enumerate(self.data):
             temp_node_row = []
             for col_idx, node_value in enumerate(row):
-                new_node = BreachNode(node_value, row_idx, col_idx)
+                new_node = BreachNode(node_value, row_idx, col_idx, node_id)
                 temp_node_row.append(new_node)
+                node_id += 1
             graph.append(temp_node_row)
 
         # at this point, the graph variable is our fully fledged graph of nodes
@@ -49,6 +57,76 @@ class BreachBoard:
 
         # now we have our full graph and all their node connections
         return graph
+
+    def get_all_paths_from_start(self, start_idx=0):
+
+        all_paths_found = set()
+        stack = []
+        current_path = []
+
+        start_node = self.graph[0][start_idx]
+
+        # add start node to stack; 'h' meaning it was from a horizontal orientation, third param is the parent node
+        stack.append((start_node, 'h', None))
+
+        # iteration = 0
+
+        while stack:
+            # iteration += 1
+            # if iteration == 50:
+            #     exit()
+            current_node, current_orient, current_parent = stack.pop()
+            # before appending, make sure last node in current path == parent node of current node
+            if current_parent:
+                while True:  # keep removing last until we hit parent
+                    last_node_in_path = current_path[-1]
+                    if current_parent is not last_node_in_path:
+                        current_path.pop()
+                    else:
+                        break
+            current_path.append(current_node)
+            if current_orient == 'h':  # need to add the vertical connections to stack
+                next_conns_to_add = current_node.v_connections
+            else:  # need to add the horizontal connections to stack
+                next_conns_to_add = current_node.h_connections
+
+            nodes_to_add_to_stack = [c for c in next_conns_to_add if c not in current_path]
+
+            if len(nodes_to_add_to_stack) == 0 or len(current_path) == self.buffer_size:  # reached end/buffer overflow
+                # print(f'Found new path! = {[n.value for n in current_path]}')
+                path_notation = ','.join(str(n.id) for n in current_path)
+
+                all_paths_found.add(path_notation)
+            else:
+                if current_orient == 'h':
+                    next_orient = 'v'
+                else:
+                    next_orient = 'h'
+                for node_to_add in reversed(nodes_to_add_to_stack):  # add in reversed so closer nodes get pushed first
+                    stack.append((node_to_add, next_orient, current_node))
+
+        one_less = set()
+        print(f'num paths found for buffer size {self.buffer_size}= {len(all_paths_found)}')
+
+        for path in all_paths_found:
+            new_path = path.split(',')
+            new_path.pop()
+            new_path_string = ','.join(id for id in new_path)
+            one_less.add(new_path_string)
+
+        print(f'num paths found for buffer size {self.buffer_size-1}= {len(one_less)}')
+
+        # print(start_node)
+        # print(start_node.h_connections)
+        # print(start_node.v_connections)
+        # print(start_node.value)
+        # paths_visited = set()
+
+        # now simply traverse our graph and look for solutions
+        next_orientation = 'vertical'  # since we always start with row 1, the next orientation is always vertical
+
+        print('lol')
+
 
     def create_possible_solutions(self):
         print(f'buffer size = {self.buffer_size}')
