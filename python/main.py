@@ -11,8 +11,17 @@ def main():
         buffer_size = int(test_file.readline().strip())
 
     new_board = BreachBoard(board_size, board_data, board_sequences, buffer_size)
-    solutions = new_board.solve()
-    print(solutions)
+    sol_tuple = new_board.solve()
+
+    if sol_tuple:
+        solution, solution_value = sol_tuple
+        print(f'Solution of value {solution_value} found!')
+        print(solution)
+        for node_id in solution.split(','):
+            node = new_board.node_id_to_node(node_id)
+            print(node.value, end='->')
+    else:
+        pass
 
     return
 

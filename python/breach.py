@@ -1,5 +1,8 @@
-import itertools
-import copy
+import os.path
+import ahocorasick
+import time
+
+MAX_BUFFER = 10  # for use in generating preprocessed solutions for each matrix size
 
 
 class BreachNode:
@@ -25,9 +28,8 @@ class BreachBoard:
         self.graph = self.create_graph()  # create the graph after receiving all inputs
 
         self.print_graph()
-        self.get_all_paths_from_start()
-
-        # self.possible_solutions = self.create_possible_solutions()  # create the list of possible solutions given seqs
+        self.ensure_preprocessed_paths_exists()
+        self.sequence_paths = self.generate_possible_sequence_paths()
 
     def create_graph(self):
 
@@ -58,257 +60,146 @@ class BreachBoard:
         # now we have our full graph and all their node connections
         return graph
 
-    def get_all_paths_from_start(self, start_idx=0):
+    def ensure_preprocessed_paths_exists(self):
 
-        all_paths_found = set()
-        stack = []
-        current_path = []
+        # ensure that the preprocessed paths for this size graph exists in our system
+        file_path = f'preprocess/{len(self.graph)}.txt'
+        file_exists = os.path.isfile(file_path)
 
-        start_node = self.graph[0][start_idx]
+        if file_exists:
+            return
 
-        # add start node to stack; 'h' meaning it was from a horizontal orientation, third param is the parent node
-        stack.append((start_node, 'h', None))
+        f = open(file_path, 'w+')
+        # else we need to start generating it for each start node
 
-        # iteration = 0
+        for start_node_idx in range(0, len(self.graph)):
 
-        while stack:
-            # iteration += 1
-            # if iteration == 50:
-            #     exit()
-            current_node, current_orient, current_parent = stack.pop()
-            # before appending, make sure last node in current path == parent node of current node
-            if current_parent:
-                while True:  # keep removing last until we hit parent
-                    last_node_in_path = current_path[-1]
-                    if current_parent is not last_node_in_path:
-                        current_path.pop()
-                    else:
-                        break
-            current_path.append(current_node)
-            if current_orient == 'h':  # need to add the vertical connections to stack
-                next_conns_to_add = current_node.v_connections
-            else:  # need to add the horizontal connections to stack
-                next_conns_to_add = current_node.h_connections
+            all_paths_found = set()
+            stack = []
+            current_path = []
 
-            nodes_to_add_to_stack = [c for c in next_conns_to_add if c not in current_path]
+            start_node = self.graph[0][start_node_idx]
 
-            if len(nodes_to_add_to_stack) == 0 or len(current_path) == self.buffer_size:  # reached end/buffer overflow
-                # print(f'Found new path! = {[n.value for n in current_path]}')
-                path_notation = ','.join(str(n.id) for n in current_path)
+            # add start node to stack; 'h' meaning it was from a horizontal orientation, third param is the parent node
+            stack.append((start_node, 'h', None))
 
-                all_paths_found.add(path_notation)
-            else:
-                if current_orient == 'h':
-                    next_orient = 'v'
+            while stack:
+                current_node, current_orient, current_parent = stack.pop()
+                # before appending, make sure last node in current path == parent node of current node
+                if current_parent:
+                    while True:  # keep removing last until we hit parent
+                        last_node_in_path = current_path[-1]
+                        if current_parent is not last_node_in_path:
+                            current_path.pop()
+                        else:
+                            break
+                current_path.append(current_node)
+                if current_orient == 'h':  # need to add the vertical connections to stack
+                    next_conns_to_add = current_node.v_connections
+                else:  # need to add the horizontal connections to stack
+                    next_conns_to_add = current_node.h_connections
+
+                nodes_to_add_to_stack = [c for c in next_conns_to_add if c not in current_path]
+
+                if len(nodes_to_add_to_stack) == 0 or len(current_path) == MAX_BUFFER:
+                    # reached end/buffer overflow so add this new path to the file
+                    path_notation = ','.join(str(n.id) for n in current_path)
+                    all_paths_found.add(path_notation)
+
                 else:
-                    next_orient = 'h'
-                for node_to_add in reversed(nodes_to_add_to_stack):  # add in reversed so closer nodes get pushed first
-                    stack.append((node_to_add, next_orient, current_node))
-
-        one_less = set()
-        print(f'num paths found for buffer size {self.buffer_size}= {len(all_paths_found)}')
-
-        for path in all_paths_found:
-            new_path = path.split(',')
-            new_path.pop()
-            new_path_string = ','.join(id for id in new_path)
-            one_less.add(new_path_string)
-
-        print(f'num paths found for buffer size {self.buffer_size-1}= {len(one_less)}')
-
-        # print(start_node)
-        # print(start_node.h_connections)
-        # print(start_node.v_connections)
-        # print(start_node.value)
-        # paths_visited = set()
-
-        # now simply traverse our graph and look for solutions
-        next_orientation = 'vertical'  # since we always start with row 1, the next orientation is always vertical
-
-        print('lol')
-
-
-    def create_possible_solutions(self):
-        print(f'buffer size = {self.buffer_size}')
-        print(self.sequences)
-
-        all_paths_possible = []  # we will return this
-
-        num_of_sequences = len(self.sequences)
-        indices_to_choose = list(range(num_of_sequences))
-
-        all_solution_orders_idxs_possible = [[i] for i in indices_to_choose]
-
-        for num_to_choose in range(2, num_of_sequences+1):
-            combos = list(itertools.combinations(indices_to_choose, num_to_choose))
-            for c in combos:
-                seq_indices = list(c)
-                perms_of_this_seq_indices = list(itertools.permutations(seq_indices))
-                all_solution_orders_idxs_possible.extend(list(i) for i in perms_of_this_seq_indices)
-                # print(perms_of_this_seq_indices)
-
-        print('all_solution_orders_possible')
-        print(all_solution_orders_idxs_possible)
-
-        possible_unmerged_paths = []
-        for solution_order_idx in all_solution_orders_idxs_possible:
-            solution_path = [self.sequences[idx] for idx in solution_order_idx]
-            possible_unmerged_paths.append(solution_path)
-
-        # now check each unmerged path for ability to merge
-        possible_merged_paths = []
-        for unmerged in possible_unmerged_paths:
-            if len(unmerged) == 1:  # this path only contains one sequence, so def can't have a merge (requires > 1 seq)
-                continue
-            else:
-                merge_index_pairs = []
-
-                for seq_step_idx in range(len(unmerged)-1):
-                    left_step = unmerged[seq_step_idx]
-                    right_step = unmerged[seq_step_idx+1]
-                    if left_step[-1] == right_step[0]:
-                        merge_index_pairs.append([seq_step_idx, seq_step_idx+1])
-
-                if len(merge_index_pairs) == 0:  # no merge pairs found so this one cannot be merged
-                    continue
-                else:
-                    # print(f'\n\nUNMERGED CANDIDATE FOUND = {unmerged}')
-                    # print(f'MERGE INDICES NEEDED = {merge_index_pairs}')
-
-                    num_merge_pairs = len(merge_index_pairs)
-                    binary_digits = num_merge_pairs
-                    enum_target = 2 ** num_merge_pairs - 1
-                    pair_toggle_combo_strings = ['{0:b}'.format(x).zfill(binary_digits) for x in range(enum_target+1)]
-                    pair_toggle_combos = [[int(c) for c in y] for y in pair_toggle_combo_strings]
-                    # print(f'pair_toggle_combos = {pair_toggle_combos}')
-
-                    for toggle_pair_booleans in pair_toggle_combos:
-                        new_merged = copy.deepcopy(unmerged)  # make a deep copy since unmerged is actually a 2d list
-                        indices_to_remove = []
-
-                        # each toggle boolean gives us a new solution - need to enumerate in reverse
-                        for pair_idx, toggle_boolean in reversed(list(enumerate(toggle_pair_booleans))):
-                            if toggle_boolean == 1:
-                                associated_merge_pair = merge_index_pairs[pair_idx]
-                                l, r = associated_merge_pair[0], associated_merge_pair[1]
-                                new_merged[l].extend(new_merged[r][1:])
-                                indices_to_remove.append(r)
-                            else:
-                                continue
-
-                        indices_to_remove.sort(reverse=True)  # need to order descending to remove from right to left
-                        for idx in indices_to_remove:
-                            new_merged.pop(idx)
-
-                        # print(f'NEW MERGED: {new_merged}')
-                        possible_merged_paths.append(new_merged)
-
-        # at this point we have both possible_unmerged_paths and possible_merged_paths; all non-wild card solutions
-        all_non_wildcard_solutions = []
-        # only add to all_non_wildcard_solutions if total len is less than buffer
-
-        print(f'possible_unmerged_paths= {possible_unmerged_paths}')
-        print(f'possible_merged_paths= {possible_merged_paths}')
-
-        for sol in possible_unmerged_paths:
-            total_len = sum([len(seq) for seq in sol])
-            if total_len > self.buffer_size:  # if total length of nested list > buffer, ignore
-                continue
-            if sol not in all_non_wildcard_solutions:
-                all_non_wildcard_solutions.append(sol)
-
-        for sol in possible_merged_paths:
-            total_len = sum([len(seq) for seq in sol])
-            if total_len > self.buffer_size:  # if total length of nested list > buffer, ignore
-                continue
-            if sol not in all_non_wildcard_solutions:
-                all_non_wildcard_solutions.append(sol)
-
-        # print(*all_non_wildcard_solutions, sep='\n')
-        # print(len(all_non_wildcard_solutions))
-
-        for non_wildcard_solution in all_non_wildcard_solutions:
-            total_len = sum([len(seq) for seq in non_wildcard_solution])
-            wildcards_available = self.buffer_size - total_len
-            if wildcards_available > 0:
-                copy_of_non_wc_sol = copy.deepcopy(non_wildcard_solution)
-                for wild in range(wildcards_available):  # add all the wildcards
-                    copy_of_non_wc_sol.extend([['*']])
-
-                print()
-                print(non_wildcard_solution, total_len, wildcards_available)
-                print(copy_of_non_wc_sol)
-
-                all_perms_of_this_copy = list(itertools.permutations(copy_of_non_wc_sol))
-                print('perms:')
-                print(*all_perms_of_this_copy,sep='\n')
-
-                # todo: all the wildcards are counting as separate instances so permutations making multiple same
-                # solutons - need to work out
-                # then get all permutations
-
-
-        exit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        first_row_values = [n.value for n in self.graph[0]]
-        num_sequences = len(self.sequences)
-
-        # first create every possible permutation of sequences without wildcards
-        perms_no_wilds = list(itertools.permutations(self.sequences))
-
-        # then generate binary numbers of length == number of sequences to determine where to put wildcards
-        wildcard_binary_placements = [list(i) for i in itertools.product([0, 1], repeat=num_sequences)]
-
-        temp_seqs = []
-
-        # for each perm with no wilds, we can add the wildcards
-        for sequence in perms_no_wilds:
-            for binary_num_list in wildcard_binary_placements:
-                copy_of_seq = list(sequence)
-                for idx_to_insert_wild, b in reversed(list(enumerate(binary_num_list))):
-                    if b == 1:
-                        copy_of_seq.insert(idx_to_insert_wild, ['*'])
-                temp_seqs.append(copy_of_seq)
-
-        final_seqs = []
-        for t in temp_seqs:  # remove all sequences that don't begin with ['*'] and also don't appear in first row
-            begin_value = t[0][0]
-            if begin_value != '*' and begin_value not in first_row_values:
-                temp_seqs.remove(t)
-            else:  #
-                full_seq = []
-                for seq_portion in t:
-                    if len(full_seq) == 0:
-                        full_seq.extend(seq_portion)
-                    elif full_seq[-1] == seq_portion[0]:
-                        full_seq.extend(seq_portion[1:])
+                    if current_orient == 'h':
+                        next_orient = 'v'
                     else:
-                        full_seq.extend(seq_portion)
+                        next_orient = 'h'
+                    for node_to_add in reversed(nodes_to_add_to_stack):  # add in reversed; closer nodes pushed first
+                        stack.append((node_to_add, next_orient, current_node))
 
-                # only add into final_seqs sequence is equal or below buffer size
-                # print(len(full_seq))
-                # print(self.buffer_size)
-                # if len(full_seq) <= self.buffer_size:
-                final_seqs.append(full_seq)
+            for path_found in all_paths_found:
+                # add each path to the file
+                f.write(f'{path_found}\n')
 
-        # 55,55,7A          BD,BD,BD            55,E9,55
-        final_seqs.sort(key=len)
-        for s in final_seqs:
-            print(s)
+            print(len(all_paths_found))
+
+        f.close()
+        return
+
+    def generate_possible_sequence_paths(self):
+
+        # filter sequences to only ones that can fit inside our buffer
+        filtered_seqs = []
+        for seq in self.sequences:
+            if len(seq) <= self.buffer_size:
+                filtered_seqs.append(seq)
+        self.sequences = filtered_seqs
+
+        # print('possible sequences: ')
+        # print(*self.sequences, sep='\n')
+        # print()
+
+        # for each node on the graph, we check if it is the beginning of any one of our sequences. if so, we get all
+        # paths for this sequence the begin with this node. we use this info to cross-match with all possible solution
+        # paths that we generate.
+
+        sequence_paths = dict()  # e.g. key of '0,3,5' gives us value of 8
+
+        for row in self.graph:
+            for node in row:
+                for seq_idx, seq in enumerate(self.sequences):
+                    if node.value == seq[0]:  # we found a potential match
+
+                        seq_len = len(seq)  # we add this sequence path once current_path reaches seq_len
+
+                        for start_orient in ['h', 'v']:  # find paths for both starting orientations
+                            start_node = node
+                            stack = []
+                            current_path = []
+                            stack.append((start_node, start_orient, None))
+
+                            while stack:
+
+                                current_node, current_orient, current_parent = stack.pop()
+                                # before appending, make sure last node in current path == parent node of current node
+                                if current_parent:
+                                    while True:  # keep removing last until we hit parent
+                                        last_node_in_path = current_path[-1]
+                                        if current_parent is not last_node_in_path:
+                                            current_path.pop()
+                                        else:
+                                            break
+                                current_path.append(current_node)
+
+                                if len(current_path) == seq_len:
+                                    # we reached the end of this sequence, add to list of paths along with value
+                                    # and just continue
+                                    path_notation = ','.join(str(n.id) for n in current_path)
+                                    sequence_paths[path_notation] = 2**seq_idx
+                                    continue
+
+                                # else we need to continue to add neighboring nodes
+
+                                if current_orient == 'h':  # need to add the vertical connections to stack
+                                    next_conns_to_add = current_node.v_connections
+                                else:  # need to add the horizontal connections to stack
+                                    next_conns_to_add = current_node.h_connections
+
+                                next_node_to_match = seq[len(current_path)]
+                                nodes_to_add_to_stack = [c for c in next_conns_to_add if
+                                                         c not in current_path and c.value == next_node_to_match]
+
+                                if len(nodes_to_add_to_stack) == 0:  # no possible nodes to add to path; incomplete
+                                    continue
+                                else:
+                                    if current_orient == 'h':
+                                        next_orient = 'v'
+                                    else:
+                                        next_orient = 'h'
+                                    for node_to_add in reversed(nodes_to_add_to_stack):
+                                        # add in reversed; closer nodes pushed first
+                                        stack.append((node_to_add, next_orient, current_node))
+                    else:
+                        continue
+
+        return sequence_paths
 
     def print_graph(self):
 
@@ -321,6 +212,119 @@ class BreachBoard:
             print()
         print('-' * 4 * self.size + '\n')
 
+        for row in self.graph:
+            for node in row:
+                node: BreachNode
+                print(f'[{str(node.id).zfill(2)}]', end='')
+            print()
+        print('-' * 4 * self.size + '\n')
+
+    def node_id_to_node(self, node_id):
+
+        # given any node id, return the node object
+        given_id = int(node_id)
+        graph_len = len(self.graph)
+        row_num = int(given_id/graph_len)
+        col_num = int(given_id % graph_len)
+
+        return self.graph[row_num][col_num]
+
     def solve(self):
 
-        return 'No solution'
+        if self.buffer_size > MAX_BUFFER:
+            print('Warning: we can only account for buffer sizes of up to 10. You may not get most optimal solution!')
+
+        if not self.sequences:  # if nothing in self.sequences, there is nothing to solve
+            print(f'Cannot solve; no sequences can fit inside the given buffer size.')
+            return None
+
+        # num_of_seq_seen = 0
+        # potential_buffer_fills = 0
+        max_solution_value_possible = 0  # would be the solution with all sequences solved or that buffer can fit
+        for seq_idx, seq in reversed(list(enumerate(self.sequences))):
+            max_solution_value_possible += (2 ** seq_idx)
+            #
+            # num_of_seq_seen += 1
+            # value_of_seq = 2**seq_idx
+            # len_of_seq = len(seq)
+            # print(f'\nsequence right now: {seq} with value {value_of_seq} and length {len_of_seq}')
+            # print(f'before adding seq, we have potential_buffer_fills = {potential_buffer_fills}')
+            #
+            # if potential_buffer_fills+len_of_seq > self.buffer_size:  # stop if adding new seq puts us over the buffer
+            #     print('adding this new sequence puts us outside of buffer size so cant add')
+            #     continue
+            # else:
+            #     potential_buffer_fills += len_of_seq
+            #     max_solution_value_possible += (2 ** seq_idx)
+            #     potential_buffer_fills -= 1  # reduce buffer by 1 when we add since there is possibility of a merge
+            #     print(f'after adding seq, we have potential_buffer_fills = {potential_buffer_fills}')
+            #     print(f'max_solution_value_possible = {max_solution_value_possible}')
+
+        print(f'Max solution value possible = {max_solution_value_possible}')
+
+        # 1. open the appropriate preprocessed file
+        file_path = f'preprocess/{len(self.graph)}.txt'
+        f = open(file_path, 'r')
+
+        print(f'Need to match these available sequence combos: {self.sequence_paths}')
+        # 2. create Automaton object on all sequences inside self.sequence_paths
+        a = ahocorasick.Automaton()
+        a_idx = 0
+        for seq_path in self.sequence_paths:
+            # need to add prefix and suffix commas to prevent matching 4,3 with 34,32 -> ,4,3,
+            # print(seq_path)
+            edited_seq_path = f',{seq_path},'
+            path_value = self.sequence_paths[seq_path]
+            a.add_word(edited_seq_path, (a_idx, edited_seq_path, path_value))
+            a_idx += 1
+        a.make_automaton()
+
+
+
+        # 3. read through each line in file and set it to the haystack to find each sequence path
+        time_start = time.time()
+        need_to_trim = True if self.buffer_size < MAX_BUFFER else False
+
+        haystacks_processed = set()
+        max_solution_value_so_far = 0
+        best_solution_so_far = ''
+
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            if need_to_trim:
+                line = ','.join(line.split(',')[0:self.buffer_size])
+
+            if line in haystacks_processed:
+                continue
+            else:
+                haystacks_processed.add(line)
+
+            haystack = f',{line},'  # need to add prefix and suffix commas to prevent matching 4,3 with 34,32 -> ,4,3,
+            values_of_haystack = set()
+            for found in a.iter(haystack):
+                start_idx, (end_idx, edited_seq_path, path_value) = found
+                values_of_haystack.add(path_value)
+
+            total_solution_value = sum(values_of_haystack)
+
+            if total_solution_value > max_solution_value_so_far:
+                max_solution_value_so_far = total_solution_value
+                best_solution_so_far = line
+                if max_solution_value_so_far == max_solution_value_possible:
+                    break
+
+        print(f'Took {time.time() - time_start} seconds.')
+
+        # # 3 bonus. could try big haystack by just reading into all one line, improves time but takes lots more logic
+        # time_start = time.time()
+        # big_haystack = ',' + f.read() + ','
+        # # values_of_haystack = set()
+        #
+        # for found in a.iter(big_haystack):
+        #     start_idx, (end_idx, edited_seq_path, path_value) = found
+        # print(f'Took {time.time() - time_start} seconds.')
+
+        f.close()
+        return best_solution_so_far, max_solution_value_so_far
