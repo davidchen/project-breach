@@ -267,26 +267,22 @@ class BreachBoard:
         # 2. create Automaton object on all sequences inside self.sequence_paths
         a = ahocorasick.Automaton()
         a_idx = 0
-        set_of_seq_starts = set()
+        # set_of_seq_starts = set()
         for seq_path in self.sequence_paths:
             path_value = self.sequence_paths[seq_path]
             # print(f'Possible sequence path: {seq_path} with value {path_value}')
-            first_in_seq_path_list = seq_path[0:2]
-            set_of_seq_starts.add(first_in_seq_path_list)
+            # first_in_seq_path_list = seq_path[0:2]
+            # set_of_seq_starts.add(first_in_seq_path_list)
             a.add_word(seq_path, (a_idx, seq_path, path_value))
             a_idx += 1
         a.make_automaton()
 
         # 3. read through each line in file and set it to the haystack to find each sequence path
-        time_start = time.time()
         need_to_trim = True if self.buffer_size < MAX_BUFFER else False
 
         haystacks_processed = set()
         max_solution_value_so_far = 0
         best_solution_so_far = ''
-
-        first_three_okay = set()
-        first_three_ignore = set()
 
         while True:
             line = f.readline()
@@ -301,17 +297,15 @@ class BreachBoard:
             haystacks_processed.add(line)
 
             values_of_haystack = set()
-
             total_solution_value = 0
+
             for found in a.iter(line):
-                start_idx, (end_idx, edited_seq_path, path_value) = found
+                start_idx, (end_idx, seq_path, path_value) = found
                 if path_value in values_of_haystack:
                     continue
                 else:
                     total_solution_value += path_value
                     values_of_haystack.add(path_value)
-
-            # total_solution_value = sum(values_of_haystack)
 
             if total_solution_value > max_solution_value_so_far:
                 max_solution_value_so_far = total_solution_value
@@ -319,18 +313,11 @@ class BreachBoard:
                 if max_solution_value_so_far == max_solution_value_possible:
                     break
 
-        # print(f'num_first_three_ignored={num_first_three_ignored}')
-        print(f'Took {time.time() - time_start} seconds.')
-
         # 3 bonus. could try big haystack by just reading into all one line, improves time but takes lots more logic
-        # time_start = time.time()
-        # big_haystack = ',' + f.read().replace('\n', ',|,') + ','
-        # print(big_haystack)
-        # # values_of_haystack = set()
+        # big_haystack = f.read().replace('\n', '')
         #
-        # # for found in a.iter(big_haystack):
-        # #     start_idx, (end_idx, edited_seq_path, path_value) = found
-        # print(f'Took {time.time() - time_start} seconds.')
+        # for found in a.iter(big_haystack):
+        #     start_idx, (end_idx, edited_seq_path, path_value) = found
 
         f.close()
 
