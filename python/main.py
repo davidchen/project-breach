@@ -20,6 +20,7 @@ def main():
         for node_id in solution.split(','):
             node = new_board.node_id_to_node(node_id)
             print(node.value, end='->')
+        print('Done.')
     else:
         pass
 

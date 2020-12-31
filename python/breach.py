@@ -210,14 +210,14 @@ class BreachBoard:
                 node: BreachNode
                 print(f'[{node.value}]', end='')
             print()
-        print('-' * 4 * self.size + '\n')
+        print('-' * 4 * self.size)
 
         for row in self.graph:
             for node in row:
                 node: BreachNode
                 print(f'[{str(node.id).zfill(2)}]', end='')
             print()
-        print('-' * 4 * self.size + '\n')
+        print('-' * 4 * self.size)
 
     def node_id_to_node(self, node_id):
 
@@ -260,13 +260,13 @@ class BreachBoard:
             #     print(f'after adding seq, we have potential_buffer_fills = {potential_buffer_fills}')
             #     print(f'max_solution_value_possible = {max_solution_value_possible}')
 
-        print(f'Max solution value possible = {max_solution_value_possible}')
+        print(f'Max solution value possible in perfect grid = {max_solution_value_possible}')
 
         # 1. open the appropriate preprocessed file
         file_path = f'preprocess/{len(self.graph)}.txt'
         f = open(file_path, 'r')
 
-        print(f'Need to match these available sequence combos: {self.sequence_paths}')
+        # print(f'Need to match these available sequence combos: {self.sequence_paths}')
         # 2. create Automaton object on all sequences inside self.sequence_paths
         a = ahocorasick.Automaton()
         a_idx = 0
@@ -276,6 +276,7 @@ class BreachBoard:
             edited_seq_path = f',{seq_path},'
             path_value = self.sequence_paths[seq_path]
             a.add_word(edited_seq_path, (a_idx, edited_seq_path, path_value))
+            # print(f'Possible sequence path: {edited_seq_path} with value {path_value}')
             a_idx += 1
         a.make_automaton()
 
@@ -317,14 +318,16 @@ class BreachBoard:
 
         print(f'Took {time.time() - time_start} seconds.')
 
-        # # 3 bonus. could try big haystack by just reading into all one line, improves time but takes lots more logic
+        # 3 bonus. could try big haystack by just reading into all one line, improves time but takes lots more logic
         # time_start = time.time()
-        # big_haystack = ',' + f.read() + ','
+        # big_haystack = ',' + f.read().replace('\n', ',|,') + ','
+        # print(big_haystack)
         # # values_of_haystack = set()
         #
-        # for found in a.iter(big_haystack):
-        #     start_idx, (end_idx, edited_seq_path, path_value) = found
+        # # for found in a.iter(big_haystack):
+        # #     start_idx, (end_idx, edited_seq_path, path_value) = found
         # print(f'Took {time.time() - time_start} seconds.')
 
         f.close()
+
         return best_solution_so_far, max_solution_value_so_far
