@@ -118,8 +118,6 @@ class BreachBoard:
                 # add each path to the file
                 f.write(f'{path_found}\n')
 
-            print(len(all_paths_found))
-
         f.close()
         return
 
