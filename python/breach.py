@@ -49,7 +49,6 @@ class BreachBoard:
         # then link up each node with its connections
         for row_idx, row in enumerate(graph):
             for col_idx, node in enumerate(row):
-
                 node.v_connections.extend([r[col_idx] for r in graph])  # add v conns
                 node.h_connections.extend(graph[row_idx])  # add h conns
 
@@ -103,7 +102,7 @@ class BreachBoard:
 
                 if len(nodes_to_add_to_stack) == 0 or len(current_path) == MAX_BUFFER:
                     # reached end/buffer overflow so add this new path to the file
-                    path_notation = ','.join(str(n.id) for n in current_path)
+                    path_notation = ''.join(str(n.id).zfill(2) for n in current_path)
                     all_paths_found.add(path_notation)
 
                 else:
@@ -169,8 +168,8 @@ class BreachBoard:
                                 if len(current_path) == seq_len:
                                     # we reached the end of this sequence, add to list of paths along with value
                                     # and just continue
-                                    path_notation = ','.join(str(n.id) for n in current_path)
-                                    sequence_paths[path_notation] = 2**seq_idx
+                                    path_notation = ''.join(str(n.id).zfill(2) for n in current_path)
+                                    sequence_paths[path_notation] = 2 ** seq_idx
                                     continue
 
                                 # else we need to continue to add neighboring nodes
@@ -222,7 +221,7 @@ class BreachBoard:
         # given any node id, return the node object
         given_id = int(node_id)
         graph_len = len(self.graph)
-        row_num = int(given_id/graph_len)
+        row_num = int(given_id / graph_len)
         col_num = int(given_id % graph_len)
 
         return self.graph[row_num][col_num]
@@ -268,17 +267,15 @@ class BreachBoard:
         # 2. create Automaton object on all sequences inside self.sequence_paths
         a = ahocorasick.Automaton()
         a_idx = 0
+        set_of_seq_starts = set()
         for seq_path in self.sequence_paths:
-            # need to add prefix and suffix commas to prevent matching 4,3 with 34,32 -> ,4,3,
-            # print(seq_path)
-            edited_seq_path = f',{seq_path},'
             path_value = self.sequence_paths[seq_path]
-            a.add_word(edited_seq_path, (a_idx, edited_seq_path, path_value))
-            # print(f'Possible sequence path: {edited_seq_path} with value {path_value}')
+            # print(f'Possible sequence path: {seq_path} with value {path_value}')
+            first_in_seq_path_list = seq_path[0:2]
+            set_of_seq_starts.add(first_in_seq_path_list)
+            a.add_word(seq_path, (a_idx, seq_path, path_value))
             a_idx += 1
         a.make_automaton()
-
-
 
         # 3. read through each line in file and set it to the haystack to find each sequence path
         time_start = time.time()
@@ -288,25 +285,33 @@ class BreachBoard:
         max_solution_value_so_far = 0
         best_solution_so_far = ''
 
+        first_three_okay = set()
+        first_three_ignore = set()
+
         while True:
             line = f.readline()
             if not line:
                 break
+
             if need_to_trim:
-                line = ','.join(line.split(',')[0:self.buffer_size])
+                line = line[0:self.buffer_size * 2]
 
             if line in haystacks_processed:
                 continue
-            else:
-                haystacks_processed.add(line)
+            haystacks_processed.add(line)
 
-            haystack = f',{line},'  # need to add prefix and suffix commas to prevent matching 4,3 with 34,32 -> ,4,3,
             values_of_haystack = set()
-            for found in a.iter(haystack):
-                start_idx, (end_idx, edited_seq_path, path_value) = found
-                values_of_haystack.add(path_value)
 
-            total_solution_value = sum(values_of_haystack)
+            total_solution_value = 0
+            for found in a.iter(line):
+                start_idx, (end_idx, edited_seq_path, path_value) = found
+                if path_value in values_of_haystack:
+                    continue
+                else:
+                    total_solution_value += path_value
+                    values_of_haystack.add(path_value)
+
+            # total_solution_value = sum(values_of_haystack)
 
             if total_solution_value > max_solution_value_so_far:
                 max_solution_value_so_far = total_solution_value
@@ -314,6 +319,7 @@ class BreachBoard:
                 if max_solution_value_so_far == max_solution_value_possible:
                     break
 
+        # print(f'num_first_three_ignored={num_first_three_ignored}')
         print(f'Took {time.time() - time_start} seconds.')
 
         # 3 bonus. could try big haystack by just reading into all one line, improves time but takes lots more logic
@@ -328,4 +334,4 @@ class BreachBoard:
 
         f.close()
 
-        return best_solution_so_far, max_solution_value_so_far
+        return best_solution_so_far.strip(), max_solution_value_so_far

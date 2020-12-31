@@ -15,11 +15,11 @@ def main():
 
     if sol_tuple:
         solution, solution_value = sol_tuple
-        print(f'Solution of value {solution_value} found!')
-        print(solution)
-        for node_id in solution.split(','):
-            node = new_board.node_id_to_node(node_id)
-            print(node.value, end='->')
+        print(f'Solution {solution} of value {solution_value} found!')
+        for char_i in range(0, len(solution), 2):
+            node_id_str = solution[char_i:char_i+2]
+            node = new_board.node_id_to_node(node_id_str)
+            print(f'{node.value}({node_id_str})', end='->')
         print('Done.')
     else:
         pass
