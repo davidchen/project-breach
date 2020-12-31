@@ -1,8 +1,8 @@
 import os.path
 import ahocorasick
-import time
 
 MAX_BUFFER = 10  # for use in generating preprocessed solutions for each matrix size
+COMPRESSION_TABLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 
 
 class BreachNode:
@@ -102,7 +102,7 @@ class BreachBoard:
 
                 if len(nodes_to_add_to_stack) == 0 or len(current_path) == MAX_BUFFER:
                     # reached end/buffer overflow so add this new path to the file
-                    path_notation = ''.join(str(n.id).zfill(2) for n in current_path)
+                    path_notation = ''.join(COMPRESSION_TABLE[n.id] for n in current_path)
                     all_paths_found.add(path_notation)
 
                 else:
@@ -168,7 +168,7 @@ class BreachBoard:
                                 if len(current_path) == seq_len:
                                     # we reached the end of this sequence, add to list of paths along with value
                                     # and just continue
-                                    path_notation = ''.join(str(n.id).zfill(2) for n in current_path)
+                                    path_notation = ''.join(COMPRESSION_TABLE[n.id] for n in current_path)
                                     sequence_paths[path_notation] = 2 ** seq_idx
                                     continue
 
@@ -290,10 +290,11 @@ class BreachBoard:
                 break
 
             if need_to_trim:
-                line = line[0:self.buffer_size * 2]
+                line = line[0:self.buffer_size]
 
             if line in haystacks_processed:
                 continue
+
             haystacks_processed.add(line)
 
             values_of_haystack = set()
